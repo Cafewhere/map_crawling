@@ -24,8 +24,8 @@ from bs4 import BeautifulSoup as bs
 from tqdm import tqdm
 
 
-start_num = 40
-finish_num = 50
+start_num = 70
+finish_num = 80
 
 input_data = pd.read_csv('./cafe_data.csv')
 output_data = pd.DataFrame(columns=['si', 'gu', 'dong', 'name', 'review'])
@@ -112,8 +112,8 @@ for i in range(start_num, finish_num):
     # 아래로 내리기
     driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.END)
 
-    # 모든 리뷰를 펼칠 때까지 다음을 반복 (리뷰의 질을 고려해 100번만 시행 -> 100*10 = 최대 1000개 리뷰)
-    for _ in range(100):
+    # 모든 리뷰를 펼칠 때까지 다음을 반복 (리뷰의 질을 고려해 9번만 시행 -> 10*9 + 10 = 최대 100개 리뷰)
+    for _ in range(9):
         try:
             # 더보기 버튼이 있다면
             more_btn = driver.find_element(By.CLASS_NAME, 'fvwqf')
