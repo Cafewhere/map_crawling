@@ -24,8 +24,17 @@ from bs4 import BeautifulSoup as bs
 from tqdm import tqdm
 
 
-start_num = 70
-finish_num = 80
+import sys
+
+
+if len(sys.argv) != 3:
+    start_num = 0
+    finish_num = 10
+else:
+    start_num = int(sys.argv[1])
+    finish_num = int(sys.argv[2])
+
+
 
 input_data = pd.read_csv('./cafe_data.csv')
 output_data = pd.DataFrame(columns=['si', 'gu', 'dong', 'name', 'review'])
