@@ -56,6 +56,7 @@ for i in range(start_num, finish_num):
     # 검색어 남아있는 경우에 삭제
     try:
         driver.find_element(By.CLASS_NAME,"button_clear").send_keys(Keys.ENTER)
+        time.sleep(1)
     except Exception as e:
         pass
 
@@ -160,5 +161,9 @@ for i in range(start_num, finish_num):
     
 pd.DataFrame(output_data).to_csv(f'./data/review_data-{start_num}+{finish_num}-{datetime.datetime.now().strftime("%d%H%M")}.csv')
     
-
+print(" _____ _   _ ____\n\
+| ____| \ | |  _ \\n\
+|  _| |  \| | | | |\n\
+| |___| |\  | |_| |\n\
+|_____|_| \_|____/ ")
  
