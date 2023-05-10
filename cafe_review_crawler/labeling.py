@@ -27,6 +27,7 @@ from tqdm import tqdm
 import sys
 
 
+
 if len(sys.argv) != 3:
     start_num = 0
     finish_num = 10
@@ -36,8 +37,8 @@ else:
 
 
 
-input_data = pd.read_csv('./cafe_data_undup.csv', index_col=0)
-output_data = pd.DataFrame(columns=['si', 'gu', 'dong', 'name', 'review'])
+input_data = pd.read_csv('./cafe_data.csv')
+output_data = pd.DataFrame(columns=['si', 'gu', 'dong', 'name', 'summary'])
 
 
 opts = ChromeOptions()
@@ -49,9 +50,10 @@ driver = webdriver.Chrome(options=opts)
 driver.get("https://map.naver.com")
 time.sleep(30)
 
+cnt = 0
 # 검색어 입력
-for i in range(start_num, finish_num):
-    reviews = []
+for i in tqdm(range(start_num, finish_num)):
+    summarys = {}
 
     # 검색어 남아있는 경우에 삭제
     try:
@@ -68,7 +70,7 @@ for i in range(start_num, finish_num):
     # 검색어 입력 및 검색
     si, gu, dong, cafe_name, _ = input_data.iloc[i] # 서울특별시,강남구,역삼동,정월
     search = f"{si} {gu} {dong} {cafe_name}"
-    print(f"#################### {i}th [{search}] ####################")
+    #print(f"#################### {i}th [{search}] ####################")
     search_box.send_keys(search)
     search_box.send_keys(Keys.RETURN)
     time.sleep(5)
@@ -97,8 +99,8 @@ for i in range(start_num, finish_num):
         tabs = driver.find_elements(By.CLASS_NAME, '_tab-menu')
         tab_length = len(tabs)
     except Exception as e: # 카페가 없음 -> 다음 검색어로 이동
-        # 리뷰 저장
-        output_data.loc[len(output_data)] = [si, gu, dong, cafe_name, reviews]
+        # 요약 저장
+        output_data.loc[len(output_data)] = [si, gu, dong, cafe_name, summarys]
         driver.switch_to.default_content()
         continue
         
@@ -111,65 +113,61 @@ for i in range(start_num, finish_num):
             break
 
     if not has_review_tab: # 리뷰가 없음 -> 다음 검색어로 이동
-        # 리뷰 저장
-        output_data.loc[len(output_data)] = [si, gu, dong, cafe_name, reviews]
+        # 요약 저장
+        output_data.loc[len(output_data)] = [si, gu, dong, cafe_name, summarys]
         driver.switch_to.default_content()
         continue
     
-    # 리뷰 수 카운트 (DEBUG용)
-    try:
-        review_count = driver.find_element(By.CLASS_NAME, 'place_section_count').text
-    except Exception as e: # 리뷰수가 없음 -> 다음 검색어로 이동
-        # 리뷰 저장
-        output_data.loc[len(output_data)] = [si, gu, dong, cafe_name, reviews]
-        driver.switch_to.default_content()
-        continue
-    
-    # 아래로 내리기
-    driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.END)
 
-    # 모든 리뷰를 펼칠 때까지 다음을 반복 (리뷰의 질을 고려해 9번만 시행 -> 10*9 + 10 = 최대 100개 리뷰)
-    for _ in range(9):
+
+
+    # 요약 펼치기
+    while(True):
         try:
-            # 더보기 버튼이 있다면
-            more_btn = driver.find_element(By.CLASS_NAME, 'fvwqf')
-            if more_btn.text != '더보기': break
+            # 펼치기 버튼이 있다면
+            more_btn = driver.find_element(By.CLASS_NAME, 'Tvx37')
+            # if more_btn.text != '더보기': break
 
             # 더보기 버튼 클릭
             more_btn.send_keys(Keys.ENTER)
-            time.sleep(0.2)
-            driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.END)
+            # time.sleep(0.2)
+            # driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.END)
             time.sleep(1)
         except Exception as e: # 더보기 버튼이 없다
             break
 
-    # 리뷰 크롤링
-    review_list = driver.find_elements(By.CLASS_NAME, 'zPfVt')
-    time.sleep(1)
-    
-    for review in tqdm(review_list):
-        time.sleep(0.1)
-        try:
-            # 리뷰 펼치기
-            driver.execute_script("arguments[0].click();", review.find_element(By.XPATH, '..'))
-            # 해당 리뷰 추가
-            reviews.append(review.text)
-        except Exception as e:
-            print(f"리뷰가 존재하지 않음 {e}")
 
-    # 리뷰 저장
-    output_data.loc[len(output_data)] = [si, gu, dong, cafe_name, reviews]
+    # 요약 가져오기
+    try:
+        keys = driver.find_elements(By.CLASS_NAME, 'nWiXa')
+        values = driver.find_elements(By.CLASS_NAME, 'TwM9q')
+    except Exception as e: # 리뷰수가 없음 -> 다음 검색어로 이동
+        # 요약 저장
+        output_data.loc[len(output_data)] = [si, gu, dong, cafe_name, summarys]
+        driver.switch_to.default_content()
+        continue
     
+    for idx in range(len(keys)):
+        key = keys[idx].text
+        value = values[idx].text
+        summarys[key] = value
+
+
+    # 요약 저장
+    output_data.loc[len(output_data)] = [si, gu, dong, cafe_name, summarys]
+    cnt += 1
 
     driver.switch_to.default_content()
     time.sleep(5)
 
     
-pd.DataFrame(output_data).to_csv(f'./data/review_data-{start_num}+{finish_num}-{datetime.datetime.now().strftime("%d%H%M")}.csv')
+pd.DataFrame(output_data).to_csv(f'./label_data/review_data-{start_num}+{finish_num}-{datetime.datetime.now().strftime("%d%H%M")}.csv')
     
 print(" _____ _   _ ____\n\
 | ____| \ | |  _ \\n\
 |  _| |  \| | | | |\n\
 | |___| |\  | |_| |\n\
 |_____|_| \_|____/ ")
+      
+print(cnt)
  
